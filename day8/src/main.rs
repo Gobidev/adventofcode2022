@@ -13,6 +13,17 @@ impl Tree {
             visible: false,
         }
     }
+
+    fn scenic_score_in_direction(&self, trees_in_direction: &[Tree]) -> usize {
+        let mut visible_trees = vec![];
+        for tree in trees_in_direction {
+            visible_trees.push(tree);
+            if tree.height >= self.height {
+                break;
+            }
+        }
+        visible_trees.len()
+    }
 }
 
 impl Display for Tree {
@@ -58,6 +69,25 @@ impl Forest {
             columns.push(column);
         }
         Self { trees: columns }
+    }
+
+    fn get_tree_on_position(&self, row: usize, column: usize) -> Tree {
+        self.trees
+            .get(row)
+            .expect("Invalid row")
+            .get(column)
+            .expect("Invalid column")
+            .clone()
+    }
+
+    fn get_trees_on_right_of_tree(&self, row: usize, column: usize) -> Vec<Tree> {
+        let mut result = vec![];
+        for (i, tree) in self.trees.get(row).expect("Invalid row").iter().enumerate() {
+            if i > column {
+                result.push(tree.clone());
+            }
+        }
+        result
     }
 
     fn calc_visability(&mut self) {
@@ -125,9 +155,70 @@ impl Display for Forest {
     }
 }
 
+fn find_max_scenic_score(forest: &Forest) -> usize {
+    // get arrays
+    let trees_rows = Forest {
+        trees: forest.trees.clone(),
+    };
+    let trees_rows_reversed = Forest {
+        trees: forest
+            .trees
+            .clone()
+            .into_iter()
+            .map(|row| row.into_iter().rev().collect::<Vec<Tree>>())
+            .collect(),
+    };
+    let trees_columns = Forest {
+        trees: forest.to_columns().trees,
+    };
+    let trees_columns_reversed = Forest {
+        trees: trees_columns
+            .trees
+            .clone()
+            .into_iter()
+            .map(|column| column.into_iter().rev().collect::<Vec<_>>())
+            .collect(),
+    };
+
+    // println!(
+    //     "{}\n{}\n{}\n{}",
+    //     trees_rows, trees_rows_reversed, trees_columns, trees_columns_reversed
+    // );
+    let forest_size = forest.trees.len();
+    // loop over every tree
+    let mut all_scenic_scores = vec![];
+    for row in 0..forest_size {
+        for column in 0..forest_size {
+            let trees_on_right = trees_rows.get_trees_on_right_of_tree(row, column);
+            let trees_on_left =
+                trees_rows_reversed.get_trees_on_right_of_tree(row, forest_size - column - 1);
+            let trees_below = trees_columns.get_trees_on_right_of_tree(column, row);
+            let trees_above =
+                trees_columns_reversed.get_trees_on_right_of_tree(column, forest_size - row - 1);
+            // calc scenic score
+            let mut scenic_score = 1;
+            scenic_score *= forest
+                .get_tree_on_position(row, column)
+                .scenic_score_in_direction(&trees_on_right);
+            scenic_score *= forest
+                .get_tree_on_position(row, column)
+                .scenic_score_in_direction(&trees_on_left);
+            scenic_score *= forest
+                .get_tree_on_position(row, column)
+                .scenic_score_in_direction(&trees_above);
+            scenic_score *= forest
+                .get_tree_on_position(row, column)
+                .scenic_score_in_direction(&trees_below);
+            all_scenic_scores.push(scenic_score);
+        }
+    }
+    *all_scenic_scores.iter().max().expect("No scenic scores")
+}
+
 fn main() {
     let mut forest = Forest::build(include_str!("../input.txt"));
     forest.calc_visability();
     println!("{forest}");
     println!("Part 1: {}", forest.count_visible());
+    println!("Part 2: {}", find_max_scenic_score(&forest));
 }
