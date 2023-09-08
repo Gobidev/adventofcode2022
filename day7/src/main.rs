@@ -145,12 +145,21 @@ fn main() {
         .skip(1)
         .collect();
     let dir_tree = Directory::build("/".to_string(), &input).0;
-    let all_sizes = find_all_sizes(dir_tree);
+    let dir_tree_size = dir_tree.size();
+    let mut all_sizes = find_all_sizes(dir_tree);
+    all_sizes.push(dir_tree_size);
+    let free_space = 70000000 - all_sizes.iter().max().unwrap();
+    let minimum_to_free_up = 30000000 - free_space;
     let mut total_of_target_dirs = 0;
-    for size in all_sizes {
-        if size <= 100000 {
+    let mut potential_deletions = vec![];
+    for size in &all_sizes {
+        if size <= &100000 {
             total_of_target_dirs += size;
+        }
+        if size >= &minimum_to_free_up {
+            potential_deletions.push(size);
         }
     }
     println!("Part 1: {total_of_target_dirs}");
+    println!("Part 2: {}", potential_deletions.iter().min().unwrap());
 }
